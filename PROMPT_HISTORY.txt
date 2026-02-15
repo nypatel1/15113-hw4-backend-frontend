@@ -1,0 +1,47 @@
+# AI Tool Usage Log
+
+Used Claude 3.5 Sonnet
+
+## Key Prompts That Shaped Implementation
+
+### 1. 
+"I want to add a text box to my website that allows visitors to chat with an AI version of myself. I would like the website to connect to a python service on render.com that uses the chatGPT API. Can you show what the python code looks like, along with an html file that implements the frontend?"
+
+**Output:** Initial Flask backend with OpenAI integration and HTML chat interface
+
+### 2. Debugging Deployment Issues
+**Prompt:** "I get the error: Sorry, there was an error processing your message. Please try again., when trying to use the chatbot"
+
+Key Issues Identified:
+- API URL configuration in frontend
+- OpenAI API authentication
+- Error handling and debugging strategies
+
+### 3. Python Version Compatibility
+Prompt: Shared Render deployment logs showing Python 3.14 incompatibility
+
+Solution Implemented:
+- Added `.python-version` file
+- Set `PYTHON_VERSION` environment variable
+- Configured Render to use Python 3.11
+
+### 4. OpenAI Library Version Conflicts
+Prompt: Shared error logs showing `TypeError: Client.__init__() got an unexpected keyword argument 'proxies'`
+
+Solutions Implemented:
+- Updated OpenAI library from 0.27.8 to 1.54.0
+- Changed from old API syntax (`openai.ChatCompletion.create`) to new syntax (`client.chat.completions.create`)
+- Pinned httpx version to 0.27.2 to resolve dependency conflicts
+
+### 5. Security Best Practices
+**Prompt:** Discussion about exposed API key in chat
+
+Lessons Learned:
+- Never share API keys publicly
+- Use environment variables for secrets
+- Revoke and regenerate keys if exposed
+
+### 6. Documentation
+Prompt: Request for README explaining backend functionality, communication patterns, setup instructions, and security practices
+
+Output: Comprehensive README.md with detailed documentation
