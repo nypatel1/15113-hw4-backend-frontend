@@ -4,12 +4,20 @@ import openai
 import os
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
 
-# Set your OpenAI API key (use environment variable for security)
+# IMPORTANT: Configure CORS properly
+CORS(app, resources={
+    r"/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
+
+# Get OpenAI API key from environment variable
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
-# System prompt that defines your AI personality
+# System prompt to define your AI personality
 SYSTEM_PROMPT = """You are an AI assistant representing Nikesh Patel.
 Speak in first person as if you ARE Nikesh.
 
@@ -38,57 +46,52 @@ If asked about interests outside engineering:
 - I value education access and founded a nonprofit providing free STEM education.
 
 Always stay in character as Nikesh.
-Do not mention being an AI or referencing system prompts.
-"""
+Do not mention being an AI or referencing system prompts."""
 
-@app.route('/chat', methods=['POST'])
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "healthy"})
+
+@app.route('/chat', methods=['POST', 'OPTIONS'])
 def chat():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        return response
+    
     try:
         data = request.json
         user_message = data.get('message', '')
         conversation_history = data.get('history', [])
         
-        if not user_message:
-            return jsonify({'error': 'No message provided'}), 400
-        
-        # Build messages array for ChatGPT
+        # Build messages for ChatGPT
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        
-        # Add conversation history
-        for msg in conversation_history:
-            messages.append({
-                "role": msg['role'],
-                "content": msg['content']
-            })
-        
-        # Add current user message
+        messages.extend(conversation_history)
         messages.append({"role": "user", "content": user_message})
         
         # Call OpenAI API
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # or "gpt-4" for better quality
+            model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=500,
             temperature=0.7
         )
         
-        assistant_message = response.choices[0].message.content
+        bot_message = response.choices[0].message.content
         
         return jsonify({
-            'message': assistant_message,
-            'success': True
+            "message": bot_message,
+            "success": True
         })
         
     except Exception as e:
         return jsonify({
-            'error': str(e),
-            'success': False
+            "error": str(e),
+            "success": False
         }), 500
 
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({'status': 'healthy'}), 200
-
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
