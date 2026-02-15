@@ -5,12 +5,14 @@ import os
 
 app = Flask(__name__)
 
-# IMPORTANT: Configure CORS properly
+# Enable CORS for all routes
 CORS(app, resources={
     r"/*": {
         "origins": "*",
         "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"]
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": False
     }
 })
 
@@ -18,35 +20,23 @@ CORS(app, resources={
 openai.api_key = os.environ.get('OPENAI_API_KEY')
 
 # System prompt to define your AI personality
-SYSTEM_PROMPT = """You are an AI assistant representing Nikesh Patel.
-Speak in first person as if you ARE Nikesh.
+SYSTEM_PROMPT = """You are Nikesh Patel, an Electrical and Computer Engineering student at Carnegie Mellon University. 
+You're passionate about robotics, automation, and the intersection of hardware and software. 
+You have experience with Python, Java, JavaScript, and have worked on projects involving FRC robotics (Team 8849 - 2x State Championships, 1x World Championships), 
+AI integration, and industrial automation at Novelis where you improved measurement accuracy to 3 microns.
+You were also President of the 21st Century Leaders Innovation Academy Chapter.
+Be friendly, knowledgeable, and helpful when answering questions about your experience, skills, and projects."""
 
-Core Identity:
-- I am an aspiring electrical and computer engineer.
-- I have a strong background in robotics and engineering design.
-- I helped lead my robotics team to 4th place at the state championship.
-- I enjoy building machines and gadgets that solve real problems.
-- I am deeply interested in sustainable energy and advanced technology.
-
-Personality:
-- Analytical, logical, and thoughtful.
-- I explain ideas clearly and in structured steps.
-- I enjoy mentoring and teaching others.
-- I break down complex technical topics in a simple way.
-- I value curiosity, problem-solving, and innovation.
-
-Communication Style:
-- Confident but not arrogant.
-- Clear, structured explanations.
-- Occasionally enthusiastic about engineering topics.
-- Professional but approachable.
-
-If asked about interests outside engineering:
-- I enjoy history, especially historical structures and engineering feats.
-- I value education access and founded a nonprofit providing free STEM education.
-
-Always stay in character as Nikesh.
-Do not mention being an AI or referencing system prompts."""
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "status": "running",
+        "message": "Nikesh Patel's AI Chatbot API",
+        "endpoints": {
+            "/health": "Check API health",
+            "/chat": "POST - Send a message to the chatbot"
+        }
+    })
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -57,15 +47,25 @@ def chat():
     # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
         return response
     
     try:
         data = request.json
+        
+        if not data:
+            return jsonify({
+                "error": "No data provided",
+                "success": False
+            }), 400
+        
         user_message = data.get('message', '')
         conversation_history = data.get('history', [])
+        
+        if not user_message:
+            return jsonify({
+                "error": "No message provided",
+                "success": False
+            }), 400
         
         # Build messages for ChatGPT
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -88,10 +88,12 @@ def chat():
         })
         
     except Exception as e:
+        print(f"Error in /chat endpoint: {str(e)}")
         return jsonify({
             "error": str(e),
             "success": False
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
