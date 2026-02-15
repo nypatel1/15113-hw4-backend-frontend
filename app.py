@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 import os
 
 app = Flask(__name__)
@@ -16,8 +16,8 @@ CORS(app, resources={
     }
 })
 
-# Get OpenAI API key from environment variable
-openai.api_key = os.environ.get('OPENAI_API_KEY')
+# Initialize OpenAI client
+client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
 # System prompt to define your AI personality
 SYSTEM_PROMPT = """You are Nikesh Patel, an Electrical and Computer Engineering student at Carnegie Mellon University. 
@@ -51,7 +51,6 @@ def chat():
     
     try:
         data = request.json
-        
         if not data:
             return jsonify({
                 "error": "No data provided",
@@ -72,8 +71,10 @@ def chat():
         messages.extend(conversation_history)
         messages.append({"role": "user", "content": user_message})
         
-        # Call OpenAI API
-        response = openai.ChatCompletion.create(
+        print(f"Sending to OpenAI with {len(messages)} messages")
+        
+        # Call OpenAI API with NEW syntax
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=500,
@@ -82,13 +83,17 @@ def chat():
         
         bot_message = response.choices[0].message.content
         
+        print(f"Received response: {bot_message[:50]}...")
+        
         return jsonify({
             "message": bot_message,
             "success": True
         })
-        
+    
     except Exception as e:
         print(f"Error in /chat endpoint: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "error": str(e),
             "success": False
